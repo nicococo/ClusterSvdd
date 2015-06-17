@@ -139,8 +139,8 @@ class SVDD:
 			print('First train, then test.')
 			return 0, SVDD.MSG_ERROR
 
-		Pc = self.kernel[self.svs,self.svs]
-		resc = matrix([dotu(Pc[i,:],self.alphas[self.svs]) for i in range(N)]) 
+		Pc = self.kernel[self.svs, self.svs]
+		resc = matrix([dotu(Pc[i,:], self.alphas[self.svs]) for i in range(N)])
 		resc = dotu(resc,self.alphas[self.svs])
-		res = resc - 2*matrix([dotu(k[i,:],self.alphas[self.svs]) for i in range(tN)]) + norms
+		res = resc - 2. * matrix([dotu(k[i,:], self.alphas[self.svs]) for i in range(tN)]) + norms
 		return res, SVDD.MSG_OK

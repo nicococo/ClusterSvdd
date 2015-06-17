@@ -8,15 +8,15 @@ from kernel import Kernel
 
 if __name__ == '__main__':
 	# kernel parameter and type
-	kparam = 0.1
+	kparam = 1.9
 	ktype = 'rbf'
 
 	# generate raw training data
-	Dtrain = co.normal(2,100)
+	Dtrain = co.normal(2, 100)
 	# build kernel
-	kernel = Kernel.get_kernel(Dtrain,Dtrain,ktype,kparam)
+	kernel = Kernel.get_kernel(Dtrain, Dtrain, ktype, kparam)
 	# train svdd
-	svdd = SVDD(kernel,0.9)
+	svdd = SVDD(kernel, 1./(100.*0.1))
 	svdd.train_dual()
 
 	# generate test data grid
@@ -31,11 +31,11 @@ if __name__ == '__main__':
 	print(Dtest.shape)
 
 	# build test kernel	
-	kernel = Kernel.get_kernel(co.matrix(Dtest),Dtrain[:,svdd.get_support_dual()],ktype,kparam)
+	kernel = Kernel.get_kernel(co.matrix(Dtest), Dtrain[:, svdd.get_support_dual()], ktype, kparam)
 	# for svdd we need the data norms additionally
-	norms = Kernel.get_diag_kernel(co.matrix(Dtest),ktype,kparam)
+	norms = Kernel.get_diag_kernel(co.matrix(Dtest), ktype, kparam)
 
-	(res,state) = svdd.apply_dual(kernel,norms)
+	(res, state) = svdd.apply_dual(kernel, norms)
 	print(res.size)
 
 	# nice visualization

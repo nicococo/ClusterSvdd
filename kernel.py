@@ -18,13 +18,19 @@ class Kernel:
         kernel = matrix(1.0)
         if type=='linear':
             print('Calculating linear kernel with size {0}x{1}.'.format(Xn,Yn))
-            kernel = X.trans()*X
+            kernel = X.trans()*Y
 
         if type=='rbf':
-            print('Calculating Gaussian kernel with size {0}x{1} and sigma2={2}.'.format(Xn,Yn,param))
-            Dx = np.ones((Yn,1)) * np.diag(X.trans()*X).reshape(1,Xn)
-            Dy = np.diag(Y.trans()*Y).reshape(Yn,1) * np.ones((1,Xn)) 
-            kernel = Dx - np.array(2.0 * X.trans()*Y) + Dy
+            print('Calculating Gaussian kernel with size {0}x{1} and sigma2={2}.'.format(Xn, Yn, param))
+            Dx = (np.ones((Yn, 1)) * np.diag(X.trans()*X).reshape(1, Xn)).T
+            Dy = (np.ones((Xn, 1)) * np.diag(Y.trans()*Y).reshape(1, Yn))
+
+            print Dy.shape
+            print Dx.shape
+
+            print X.size
+            print Y.size
+            kernel = Dx - 2.* np.array(X.trans()*Y) + Dy
             kernel = matrix(np.exp(-kernel/param))
 
         return kernel

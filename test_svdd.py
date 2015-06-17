@@ -16,7 +16,7 @@ if __name__ == '__main__':
 	# build kernel
 	kernel = Kernel.get_kernel(Dtrain, Dtrain, ktype, kparam)
 	# train svdd
-	svdd = SVDD(kernel, 1./(100.*0.1))
+	svdd = SVDD(kernel, 1./(100. * 0.1))
 	svdd.train_dual()
 
 	# generate test data grid

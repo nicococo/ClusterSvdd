@@ -1,49 +1,68 @@
 import numpy as np
-import pylab as pl
 import matplotlib.pyplot as plt
-import cvxopt as co
 
-from svdd import SVDD
+from svdd_dual_qp import SvddDualQP
 from kernel import Kernel
+from svdd_primal_sgd import SvddPrimalSGD
 
 if __name__ == '__main__':
-    # kernel parameter and type
-    kparam = 2.9
-    ktype = 'rbf'
+    # outlier fraction
+    nu = 0.15
 
     # generate raw training data
-    Dtrain = co.normal(2, 100)
+    Dtrain = np.array([[0.4,0.1],[0.1,1.1]]).dot(np.random.randn(2, 2500))
+    Dtrain = np.random.randn(10, 2500)
+
     # build kernel
-    kernel = Kernel.get_kernel(Dtrain, Dtrain, ktype, kparam)
-    # train svdd
-    svdd = SVDD(kernel, 0.05)
+    kernel = Kernel.get_kernel(Dtrain, Dtrain, 'linear')
+
+    # train dual svdd
+    svdd = SvddDualQP(kernel, nu)
     svdd.fit()
+
+    # train primal svdd
+    psvdd = SvddPrimalSGD(nu)
+    psvdd.fit(Dtrain)
+
+    # print solutions
+    print('\n  dual-svdd: obj={0}  T={1}.'.format(svdd.pobj, svdd.radius2))
+    print('primal-svdd: obj={0}  T={1}.\n'.format(psvdd.pobj, psvdd.radius2))
 
     # generate test data grid
     delta = 0.1
     x = np.arange(-4.0, 4.0, delta)
     y = np.arange(-4.0, 4.0, delta)
     X, Y = np.meshgrid(x, y)
-    (sx,sy) = X.shape
-    Xf = np.reshape(X,(1,sx*sy))
-    Yf = np.reshape(Y,(1,sx*sy))
-    Dtest = np.append(Xf,Yf,axis=0)
+    (sx, sy) = X.shape
+    Xf = np.reshape(X,(1, sx*sy))
+    Yf = np.reshape(Y,(1, sx*sy))
+    Dtest = np.append(Xf, Yf, axis=0)
+    if Dtrain.shape[0] > 2:
+        Dtest = np.append(Dtest, np.random.randn(Dtrain.shape[0]-2, sx*sy), axis=0)
+
     print(Dtest.shape)
 
     # build test kernel
-    kernel = Kernel.get_kernel(co.matrix(Dtest), Dtrain[:, svdd.get_support_inds()], ktype, kparam)
+    kernel = Kernel.get_kernel(Dtest, Dtrain[:, svdd.get_support_inds()], 'linear')
     # for svdd we need the data norms additionally
-    norms = Kernel.get_diag_kernel(co.matrix(Dtest), ktype, kparam)
+    norms = Kernel.get_diag_kernel(Dtest, 'linear')
 
     res = svdd.predict(kernel, norms)
-    print(res.size)
+    pres = psvdd.predict(Dtest)
 
     # nice visualization
-    Z = np.reshape(res,(sx,sy))
+    plt.figure(1)
+    Z = np.reshape(res,(sx, sy))
     plt.contourf(X, Y, Z)
-    plt.contour(X, Y, Z, [np.array(svdd.get_threshold())])
-    plt.scatter(Dtrain[0,svdd.get_support_inds()],Dtrain[1,svdd.get_support_inds()],40,c='k')
-    plt.scatter(Dtrain[0,:],Dtrain[1,:],10)
+    plt.contour(X, Y, Z, [0.0], linewidths=3.0, colors='k')
+    plt.scatter(Dtrain[0, svdd.get_support_inds()], Dtrain[1, svdd.get_support_inds()], 40, c='k')
+    plt.scatter(Dtrain[0, :], Dtrain[1, :],10)
+
+    plt.figure(2)
+    Z = np.reshape(pres,(sx, sy))
+    plt.contourf(X, Y, Z)
+    plt.contour(X, Y, Z, [0.0], linewidths=3.0, colors='k')
+    plt.scatter(Dtrain[0, :], Dtrain[1, :], 10)
     plt.show()
 
     print('finished')

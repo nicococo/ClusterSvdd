@@ -1,15 +1,15 @@
 from cvxopt import matrix,spmatrix,sparse
-from cvxopt.blas import dot,dotu
 from cvxopt.solvers import qp
 import numpy as np
-from kernel import Kernel  
 
-class SVDD:
-    """Dual QP implementation of the support vector data description (SVDD)."""
+class SvddDualQP:
+    """ Dual QP implementation of the support vector data description (SVDD).
+        Author: Nico Goernitz, TU Berlin, 2015
+    """
 
-    PRECISION = 10**-3 # important: effects the threshold, support vectors and speed!
+    PRECISION = 1e-4 # important: effects the threshold, support vectors and speed!
 
-    kernel = None 	# (matrix) our training kernel
+    kernel = None 	# (matrix) our training
     norms = None    # (vector)
     samples = -1 	# (scalar) amount of training data in X
 
@@ -17,13 +17,15 @@ class SVDD:
 
     alphas = None	# (vector) dual solution vector
     svs = None      # (vector) support vector indices
-    threshold = 0.0	# (scalar) the optimized threshold (rho)
+    radius2 = 0.0	# (scalar) the optimized threshold (rho)
+
+    pobj = 0.0      # (scalar) primal objective value after training
 
     def __init__(self, kernel, nu):
         self.kernel = kernel
         self.nu = nu
-        (self.samples,foo) = kernel.size
-        self.norms = matrix(0.0, (self.samples, 1))
+        (self.samples, foo) = kernel.shape
+        self.norms = np.zeros((self.samples))
         for i in range(self.samples):
             self.norms[i] = kernel[i, i]
         print('Creating new SVDD with {0} samples and nu={1}.'.format(self.samples, nu))
@@ -39,12 +41,19 @@ class SVDD:
         # number of training examples
         N = self.samples
         C = 1./(self.samples*self.nu)
+        if self.nu >= 1.0:
+            print("Center-of-mass solution.")
+            self.alphas = np.ones(self.samples)/float(self.samples)
+            self.radius2 = 0.0
+            self.svs = np.array(range(self.samples))
+            self.pobj = 0.0  # TODO: calculate real primal objective
+            return self.alphas, self.radius2
 
         # generate a kernel matrix
-        P = self.kernel
+        P = 2.0*matrix(self.kernel)
 
         # this is the diagonal of the kernel matrix
-        q = matrix([0.5*P[i,i] for i in range(N)], (N,1))
+        q = matrix(self.norms)
 
         # sum_i alpha_i = A alpha = b = 1.0
         A = matrix(1.0, (1,N))
@@ -52,7 +61,7 @@ class SVDD:
 
         # 0 <= alpha_i <= h = C
         G1 = spmatrix(1.0, range(N), range(N))
-        G = sparse([G1,-G1])
+        G = sparse([G1, -G1])
         h1 = matrix(C, (N,1))
         h2 = matrix(0.0, (N,1))
         h = matrix([h1,h2])
@@ -60,23 +69,21 @@ class SVDD:
         sol = qp(P, -q, G, h, A, b)
 
         # store solution
-        self.alphas = sol['x']
+        self.alphas = np.array(sol['x'])
+        self.pobj = -sol['primal objective']
 
         # find support vectors
-        self.svs = []
-        for i in range(N):
-            if self.alphas[i]>SVDD.PRECISION:
-                self.svs.append(i)
-        self.svs = matrix(self.svs)
-
+        self.svs = np.where(self.alphas >= self.PRECISION)[0]
+        print np.sum(self.alphas)
+        print self.svs.shape
         # find support vectors with alpha < C for threshold calculation
-        thres = self.predict(self.kernel[self.svs, self.svs], self.norms[self.svs])
-        self.threshold = np.min(thres)
-        print('Threshold is {0}'.format(self.threshold))
+        thres = self.predict(self.kernel[self.svs, :][:, self.svs], self.norms[self.svs])
+        self.radius2 = np.min(thres)
+        print('Threshold is {0}'.format(self.radius2))
         return self.alphas, thres
 
-    def get_threshold(self):
-        return self.threshold
+    def get_radius(self):
+        return self.radius2
 
     def get_alphas(self):
         return self.alphas
@@ -89,11 +96,7 @@ class SVDD:
 
     def predict(self, k, norms):
         # number of training examples
-        N = len(self.svs)
-        (tN, foo) = k.size
-
-        Pc = self.kernel[self.svs, self.svs]
-        resc = matrix([dotu(Pc[i,:], self.alphas[self.svs]) for i in range(N)])
-        resc = dotu(resc,self.alphas[self.svs])
-        res = resc - 2. * matrix([dotu(k[i,:], self.alphas[self.svs]) for i in range(tN)]) + norms
-        return res
+        Pc = self.kernel[self.svs, :][:, self.svs]
+        aKa = self.get_support().T.dot(Pc.dot(self.get_support()))
+        res = aKa - 2. * k.dot(self.get_support()).T + norms
+        return res - self.radius2

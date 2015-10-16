@@ -35,7 +35,6 @@ class SvddDualQP:
         self.X = X
         (dims, self.samples) = X.shape
 
-        """Trains an one-class svm in dual with kernel."""
         if (self.samples<1):
             print('Invalid training data.')
             return -1
@@ -86,7 +85,7 @@ class SvddDualQP:
         # find support vectors with alpha < C for threshold calculation
         thres = self.predict(X[:, self.svs])
         self.radius2 = np.min(thres)
-        print('Threshold is {0}'.format(self.radius2))
+        # print('Threshold is {0}'.format(self.radius2))
         return self.alphas, thres
 
     def get_radius(self):

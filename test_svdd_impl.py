@@ -10,15 +10,12 @@ if __name__ == '__main__':
     nu = 0.15
 
     # generate raw training data
-    Dtrain = np.array([[0.4,0.1],[0.1,1.1]]).dot(np.random.randn(2, 2500))
-    Dtrain = np.random.randn(10, 2500)
-
-    # build kernel
-    kernel = Kernel.get_kernel(Dtrain, Dtrain, 'linear')
+    Dtrain = np.array([[0.4,0.1],[0.1,1.1]]).dot(np.random.randn(2, 1500))
+    Dtrain = np.random.randn(2, 2500)
 
     # train dual svdd
-    svdd = SvddDualQP(kernel, nu)
-    svdd.fit()
+    svdd = SvddDualQP('linear', nu)
+    svdd.fit(Dtrain)
 
     # train primal svdd
     psvdd = SvddPrimalSGD(nu)
@@ -39,15 +36,9 @@ if __name__ == '__main__':
     Dtest = np.append(Xf, Yf, axis=0)
     if Dtrain.shape[0] > 2:
         Dtest = np.append(Dtest, np.random.randn(Dtrain.shape[0]-2, sx*sy), axis=0)
-
     print(Dtest.shape)
 
-    # build test kernel
-    kernel = Kernel.get_kernel(Dtest, Dtrain[:, svdd.get_support_inds()], 'linear')
-    # for svdd we need the data norms additionally
-    norms = Kernel.get_diag_kernel(Dtest, 'linear')
-
-    res = svdd.predict(kernel, norms)
+    res = svdd.predict(Dtest)
     pres = psvdd.predict(Dtest)
 
     # nice visualization

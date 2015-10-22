@@ -2,19 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from svdd_dual_qp import SvddDualQP
-from kernel import Kernel
 from svdd_primal_sgd import SvddPrimalSGD
 
+
 if __name__ == '__main__':
-    # outlier fraction
-    nu = 0.15
+    nu = 0.15  # outlier fraction
 
     # generate raw training data
-    Dtrain = np.array([[0.4,0.1],[0.1,1.1]]).dot(np.random.randn(2, 1500))
-    Dtrain = np.random.randn(2, 2500)
+    Dtrain = np.random.randn(2, 1200)
 
     # train dual svdd
-    svdd = SvddDualQP('linear', nu)
+    svdd = SvddDualQP('linear', 0.1, nu)
     svdd.fit(Dtrain)
 
     # train primal svdd
@@ -27,8 +25,8 @@ if __name__ == '__main__':
 
     # generate test data grid
     delta = 0.1
-    x = np.arange(-4.0, 4.0, delta)
-    y = np.arange(-4.0, 4.0, delta)
+    x = np.arange(-4.0-delta, 4.0+delta, delta)
+    y = np.arange(-4.0-delta, 4.0+delta, delta)
     X, Y = np.meshgrid(x, y)
     (sx, sy) = X.shape
     Xf = np.reshape(X,(1, sx*sy))
@@ -43,17 +41,29 @@ if __name__ == '__main__':
 
     # nice visualization
     plt.figure(1)
+    plt.subplot(1, 2, 1)
+    plt.title('Dual QP SVDD')
     Z = np.reshape(res,(sx, sy))
     plt.contourf(X, Y, Z)
     plt.contour(X, Y, Z, [0.0], linewidths=3.0, colors='k')
     plt.scatter(Dtrain[0, svdd.get_support_inds()], Dtrain[1, svdd.get_support_inds()], 40, c='k')
     plt.scatter(Dtrain[0, :], Dtrain[1, :],10)
+    plt.xlim((-4., 4.))
+    plt.ylim((-4., 4.))
+    plt.yticks(range(-4, 4), [])
+    plt.xticks(range(-4, 4), [])
 
-    plt.figure(2)
+    plt.subplot(1, 2, 2)
+    plt.title('Primal Subgradient SVDD')
     Z = np.reshape(pres,(sx, sy))
     plt.contourf(X, Y, Z)
     plt.contour(X, Y, Z, [0.0], linewidths=3.0, colors='k')
     plt.scatter(Dtrain[0, :], Dtrain[1, :], 10)
+    plt.xlim((-4., 4.))
+    plt.ylim((-4., 4.))
+    plt.yticks(range(-4, 4), [])
+    plt.xticks(range(-4, 4), [])
+
     plt.show()
 
     print('finished')

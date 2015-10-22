@@ -7,20 +7,28 @@ class ClusterSvdd:
     """
 
     PRECISION = 1e-4 # important: effects the threshold, support vectors and speed!
-    clusters = 0    # (scalar) number of clusters
-    svdds = None    # (list) list of dual qp svdds
+    clusters = 0     # (scalar) number of clusters
+    svdds = None     # (list) list of dual qp svdds
+    nu = -1.0        # (scalar) 0 < nu <= 1.0
 
-    def __init__(self, svdds):
+    use_local_fraction = True
+
+    def __init__(self, svdds, nu=-1.0):
         self.clusters = len(svdds)
         self.svdds = svdds
+        self.nu = nu
+        self.use_local_fraction = nu <= 0.
         print('Creating new ClusterSVDD with {0} clusters.'.format(self.clusters))
 
-    def fit(self, X, min_chg=0, max_iter=100):
+    def fit(self, X, min_chg=0, max_iter=100, init_membership=None):
         (dims, samples) = X.shape
 
         # init majorization step
         cinds_old = np.zeros(samples)
         cinds = np.random.randint(0, self.clusters, samples)
+        if not init_membership is None:
+            print('Using init cluster membership.')
+            cinds = init_membership
 
         # init maximization step
         for c in range(self.clusters):
@@ -40,10 +48,13 @@ class ClusterSvdd:
             for c in range(self.clusters):
                 inds = np.where(cinds == c)[0]
                 if inds.size > 0:
+                    if not self.use_local_fraction:
+                        new_nu = float(samples) * self.nu / float(inds.size)
+                        self.svdds[c].nu = new_nu
                     self.svdds[c].fit(X[:, inds])
             iter += 1
 
-        print('Dual QP cluster SVDD training finished after {0} iterations.'.format(iter))
+        print('ClusterSVDD training finished after {0} iterations.'.format(iter))
         return cinds
 
     def predict(self, Y):

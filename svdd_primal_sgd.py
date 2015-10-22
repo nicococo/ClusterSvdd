@@ -46,9 +46,9 @@ class SvddPrimalSGD:
         # be computed analytically (as center-of-mass, mean)
         if self.nu >= 1.0:
             self.c = c
-            self.radius2 = T
+            self.radius2 = 0.0
             self.pobj = 0.0  # TODO: calculate real primal objective
-            return c, T
+            return c, self.radius2
 
         is_converged = False
         obj_best = 1e20
@@ -73,10 +73,11 @@ class SvddPrimalSGD:
                 obj_best = obj
 
             # stop, if progress is too slow
-            if np.abs((obj-obj_bak)/obj) < prec:
-                print('Iter={2}: obj={0}  T={1}  #nnz={4} rel_change={3}'.format(obj, T, iter+1, np.abs((obj-obj_bak)/obj), inds.size ))
-                is_converged = True
-                continue
+            if obj > 0:
+                if np.abs((obj-obj_bak)/obj) < prec:
+                    # print('Iter={2}: obj={0}  T={1}  #nnz={4} rel_change={3}'.format(obj, T, iter+1, np.abs((obj-obj_bak)/obj), inds.size ))
+                    is_converged = True
+                    continue
             obj_bak = obj
 
             # stepsize should be not more than 0.1 % of the maximum value encountered in dist
@@ -86,7 +87,10 @@ class SvddPrimalSGD:
             T -= np.sign(dT) * max_change
             # gradient step for center
             dc = 2*C*np.sum(c.reshape((dims, 1)).dot(np.ones((1, inds.size))) - X[:, inds], axis=1)
-            c -= dc/np.linalg.norm(dc) * max_change
+            norm_dc = np.linalg.norm(dc)
+            if np.abs(norm_dc) < 1e-9:
+                norm_dc = 1.0
+            c -= dc/norm_dc * max_change
 
             iter += 1
 

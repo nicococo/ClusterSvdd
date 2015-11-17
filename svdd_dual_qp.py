@@ -31,7 +31,8 @@ class SvddDualQP:
         self.nu = nu
         print('Creating new dual QP SVDD ({0}) with nu={1}.'.format(kernel, nu))
 
-    def fit(self, X):
+    def fit(self, X, max_iter=-1):
+        # max_iter is *ignored*, just for compatibility
         self.X = X
         (dims, self.samples) = X.shape
 

@@ -43,7 +43,7 @@ if __name__ == '__main__':
     nval = 200
     plot = False
 
-    use_kernels = False
+    use_kernels = True
     if not use_kernels:
         sigmas = [1.0]
 

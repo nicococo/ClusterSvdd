@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import sklearn.metrics as metrics
 import numpy as np
 
+from svdd_dual_qp import SvddDualQP
 from svdd_primal_sgd import SvddPrimalSGD
 from cluster_svdd import ClusterSvdd
 
@@ -33,10 +34,18 @@ def generate_data(datapoints, outlier_frac=0.1, dims=2):
 
 if __name__ == '__main__':
     nus = [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2]
-    reps = 5  # number of repetitions for performance measures
-    ntrain = 1000
-    ntest = 2000
-    plot = True
+    sigmas = [0.1, 0.25, 0.5, 1.0, 2.0]
+    ks = [1, 2, 4]
+
+    reps = 1  # number of repetitions for performance measures
+    ntrain = 1000  # total number of data points is ntrain+ntest
+    ntest = 2000   # nval is part of ntrain
+    nval = 200
+    plot = False
+
+    use_kernels = False
+    if not use_kernels:
+        sigmas = [1.0]
 
     if plot:
         foo = np.load('res_anom_50_7.npz')
@@ -64,10 +73,10 @@ if __name__ == '__main__':
         plt.show()
         exit(0)
 
-    train = np.array(range(ntrain), dtype='i')
+    train = np.array(range(ntrain-nval), dtype='i')
+    val = np.array(range(ntrain-nval, ntrain), dtype='i')
     test = np.array(range(ntrain, ntrain+ntest), dtype='i')
-    aucs1 = np.zeros((reps, len(nus)))
-    aucs2 = np.zeros((reps, len(nus)))
+    aucs = np.zeros((reps, len(nus), len(ks)))
     for n in range(reps):
         for i in range(len(nus)):
             # generate new gaussians
@@ -75,38 +84,48 @@ if __name__ == '__main__':
             inds = np.random.permutation(range(ntest+ntrain))
             data = data[:, inds]
             y = y[inds]
-            # fix the initialization for all methods
-            membership = np.random.randint(0, 2, y.size)
+            for k in range(len(ks)):
+                # fix the initialization for all methods
+                membership = np.random.randint(0, ks[k], y.size)
 
-            # cluster svdd
-            svdds = [SvddPrimalSGD(nus[i]), SvddPrimalSGD(nus[i])]
-            svdd = ClusterSvdd(svdds)
-            svdd.fit(data[:, train], init_membership=membership[train])
-            scores, _ = svdd.predict(data[:, test])
-            # evaluate outlier detection abilities
-            fpr, tpr, thresholds = metrics.roc_curve(np.array(y[test]<0., dtype='i'), scores, pos_label=1)
-            aucs1[n, i] = metrics.auc(fpr, tpr)
+                max_auc = -1.0
+                max_val_auc = -1.0
+                for sigma in sigmas:
+                    # build cluster svdd
+                    svdds = list()
+                    for l in range(ks[k]):
+                        if use_kernels:
+                            svdds.append(SvddDualQP('rbf', sigma, nus[i]))
+                        else:
+                            svdds.append(SvddPrimalSGD(nus[i]))
 
-            # svdd
-            svdd = SvddPrimalSGD(nus[i])
-            svdd.fit(data[:, train])
-            scores = svdd.predict(data[:, test])
-            # evaluate outlier detection abilities
-            fpr, tpr, thresholds = metrics.roc_curve(np.array(y[test]<0., dtype='i'), scores, pos_label=1)
-            aucs2[n, i] = metrics.auc(fpr, tpr)
+                    svdd = ClusterSvdd(svdds)
+                    svdd.fit(data[:, train], init_membership=membership[train])
+                    scores_val, _ = svdd.predict(data[:, val])
+                    # test on validation data
+                    fpr, tpr, _ = metrics.roc_curve(np.array(y[val]<0., dtype='i'), scores_val, pos_label=1)
+                    curr_auc = metrics.auc(fpr, tpr)
+                    if curr_auc >= max_val_auc:
+                        # store test data accuracy
+                        scores, _ = svdd.predict(data[:, test])
+                        fpr, tpr, _ = metrics.roc_curve(np.array(y[test]<0., dtype='i'), scores, pos_label=1)
+                        max_auc = metrics.auc(fpr, tpr)
+                        max_val_auc = curr_auc
+                aucs[n, i, k] = max_auc
 
     # means and standard deviations
-    maucs1 = np.mean(aucs1, axis=0)
-    saucs1 = np.std(aucs1, axis=0)
-    print np.mean(aucs1, axis=0)
-    print np.std(aucs1, axis=0)
+    maucs = np.mean(aucs, axis=0)
+    saucs = np.std(aucs, axis=0)
+    print 'AUCs'
+    print np.mean(aucs, axis=0)
+    print 'Stds'
+    print np.std(aucs, axis=0)
 
-    maucs2 = np.mean(aucs2, axis=0)
-    saucs2 = np.std(aucs2, axis=0)
-    print np.mean(aucs2, axis=0)
-    print np.std(aucs2, axis=0)
-
-    np.savez('res_anom_{0}_{1}.npz'.format(reps, len(nus)), maucs1=maucs1, saucs1=saucs1, maucs2=maucs2, saucs2=saucs2,
-            outlier_frac=nus, ntrain=ntrain, ntest=ntest, reps=reps, nus=nus)
+    if use_kernels:
+        np.savez('res_anom_{0}_{1}_rbf.npz'.format(reps, len(nus)), maucs=maucs, saucs=saucs,
+                outlier_frac=nus, ntrain=ntrain, ntest=ntest, reps=reps, nus=nus, ks=ks, sigmas=sigmas)
+    else:
+        np.savez('res_anom_{0}_{1}.npz'.format(reps, len(nus)), maucs=maucs, saucs=saucs,
+                outlier_frac=nus, ntrain=ntrain, ntest=ntest, reps=reps, nus=nus, ks=ks, sigmas=sigmas)
 
     print('finished.')

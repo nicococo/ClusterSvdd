@@ -107,4 +107,4 @@ class SvddDualQP:
         norms = Kernel.get_diag_kernel(Y, self.kernel)
         # number of training examples
         res = self.cTc - 2. * kernel.dot(self.get_support()).T + norms
-        return res - self.radius2
+        return res.reshape(Y.shape[1]) - self.radius2

@@ -39,7 +39,7 @@ class Kernel:
         
         if type=='rbf':
             print('Gaussian kernel diagonal is always exp(0)=1.')
-            kernel = np.ones(Xn)
+            kernel = np.ones(Xn, dtype='d')
         return kernel
 
 

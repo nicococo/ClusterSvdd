@@ -93,17 +93,16 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
 
 
 if __name__ == '__main__':
-    nus = (np.arange(1, 21)/20.)[::-1]
     nus = (np.arange(1, 21)/20.)
     ks = [2, 3, 4]
 
-    outlier_frac = 0.2  # fraction of uniform noise in the generated data
-    reps = 5  # number of repetitions for performance measures
+    outlier_frac = 0.05  # fraction of uniform noise in the generated data
+    reps = 50  # number of repetitions for performance measures
     num_train = 1000
     num_test = 2000
 
-    do_plot = True
-    do_evaluation = False
+    do_plot = False
+    do_evaluation = True
 
     res_filename = 'res_robust_{0}_{1}_{2}_rbf.npz'.format(reps, len(ks), len(nus))
 

@@ -119,7 +119,7 @@ if __name__ == '__main__':
     sigmas = [0.1, 0.25, 0.5, 1.0, 2.0]
     ks = [1, 2, 3, 4]
 
-    reps = 20  # number of repetitions for performance measures
+    reps = 50  # number of repetitions for performance measures
     num_train = 1000  # total number of data points is num_train+num_test
     num_test = 2000
     num_val = 400  # num_val is part of ntrain
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     anom_frac = 0.05  # fraction of anomalies in the generated dataset
 
-    do_plot = True
+    do_plot = False
     do_evaluation = True
 
     res_filename = 'res_anom_{0}_{1}_{2}_rbf.npz'.format(reps, len(ks), len(nus))

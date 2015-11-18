@@ -26,8 +26,8 @@ def generate_data(datapoints, outlier_frac=0.1, dims=2):
     cnt += num_dpc
 
     num_dpc = datapoints-cnt
-    X[:, cnt:] = 0.5*np.random.randn(dims, num_dpc) \
-                 + np.array([-1.5, +2.]).reshape((2, 1)).dot(np.ones((1, num_dpc)))
+    X[:, cnt:] = 0.6*np.random.randn(dims, num_dpc) \
+                 + np.array([-1.5, +1.]).reshape((2, 1)).dot(np.ones((1, num_dpc)))
     y[cnt:] = 1
     return X, y
 
@@ -35,29 +35,33 @@ def generate_data(datapoints, outlier_frac=0.1, dims=2):
 if __name__ == '__main__':
     nus = [0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2]
     sigmas = [0.1, 0.25, 0.5, 1.0, 2.0]
-    ks = [1, 2, 4]
+    ks = [1, 2, 3, 4]
 
-    reps = 1  # number of repetitions for performance measures
+    reps = 20  # number of repetitions for performance measures
     ntrain = 1000  # total number of data points is ntrain+ntest
     ntest = 2000   # nval is part of ntrain
-    nval = 200
-    plot = False
+    nval = 400
+    plot = True
 
     use_kernels = True
     if not use_kernels:
         sigmas = [1.0]
 
     if plot:
-        foo = np.load('res_anom_50_7.npz')
-        maucs1 = foo['maucs1']
-        maucs2 = foo['maucs2']
-        saucs1 = foo['saucs1']
-        saucs2 = foo['saucs2']
+        if use_kernels:
+            foo = np.load('res_anom_20_7_rbf.npz')
+        else:
+            foo = np.load('res_anom_20_7.npz')
+        maucs = foo['maucs']
+        saucs = foo['saucs']
         nus = foo['nus']
+        ks = foo['ks']
 
         plt.figure(1)
-        plt.errorbar(nus, maucs1, saucs1, fmt='.-.b', linewidth=1.0, elinewidth=2.0, alpha=0.8)
-        plt.errorbar(nus, maucs2, saucs2, fmt='.-.r', linewidth=1.0, elinewidth=2.0, alpha=1.0)
+        cols = np.random.rand(maucs.shape[1], 3)
+        fmts = ['-x','--o','--D','--s','--H']
+        for i in range(maucs.shape[1]):
+            plt.errorbar(nus, maucs[:, i], saucs[:, i], fmt=fmts[i], color=cols[i, :], ecolor=cols[i, :], linewidth=2.0, elinewidth=1.0, alpha=0.8)
         plt.xlim((-0.0, 0.21))
         plt.ylim((0.35, 1.05))
         # ticks = nus.astype('|S10')
@@ -66,10 +70,12 @@ if __name__ == '__main__':
         # plt.xticks([0.0, 0.25, 0.5, 0.75, 1.0], ['0.0', '0.25', '0.5', '0.75', '1.0 = k-means'], fontsize=14)
         # plt.yticks([0.0, 0.25, 0.5, 0.75, 1.0], fontsize=14)
         plt.grid()
-        plt.xlabel(r'Percentage of anomalies in the dataset', fontsize=14)
+        plt.xlabel(r'$\nu$', fontsize=14)
         plt.ylabel(r'Anomaly Detection Accuracy (in AUROC)', fontsize=14)
-        names = ['ClusterSVDD',r'SVDD']
-        plt.legend(names, loc=1, fontsize=14)
+        names = list()
+        for i in range(maucs.shape[1]):
+            names.append('ClusterSVDD (k={0})'.format(ks[i]))
+        plt.legend(names, loc=4, fontsize=14)
         plt.show()
         exit(0)
 
@@ -78,12 +84,13 @@ if __name__ == '__main__':
     test = np.array(range(ntrain, ntrain+ntest), dtype='i')
     aucs = np.zeros((reps, len(nus), len(ks)))
     for n in range(reps):
+        # generate new gaussians
+        # data, y = generate_data(ntrain+ntest, outlier_frac=nus[i])
+        data, y = generate_data(ntrain+ntest, outlier_frac=0.05)
+        inds = np.random.permutation(range(ntest+ntrain))
+        data = data[:, inds]
+        y = y[inds]
         for i in range(len(nus)):
-            # generate new gaussians
-            data, y = generate_data(ntrain+ntest, outlier_frac=nus[i])
-            inds = np.random.permutation(range(ntest+ntrain))
-            data = data[:, inds]
-            y = y[inds]
             for k in range(len(ks)):
                 # fix the initialization for all methods
                 membership = np.random.randint(0, ks[k], y.size)

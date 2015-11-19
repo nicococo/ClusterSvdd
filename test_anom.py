@@ -39,14 +39,16 @@ def plot_results(fname):
     saucs = foo['saucs']
     nus = foo['nus']
     ks = foo['ks']
+    reps = foo['reps']
 
     plt.figure(1)
+    np.random.seed(10)
     cols = np.random.rand(maucs.shape[1], 3)
     fmts = ['-x', '--o', '--D', '--s', '--H']
     for i in range(maucs.shape[1]):
-        plt.errorbar(nus, maucs[:, i], saucs[:, i], fmt=fmts[i], color=cols[i, :], ecolor=cols[i, :], linewidth=2.0, elinewidth=1.0, alpha=0.8)
+        plt.errorbar(nus, maucs[:, i], saucs[:, i]/np.sqrt(reps), fmt=fmts[i], color=cols[i, :], ecolor=cols[i, :], linewidth=2.0, elinewidth=1.0, alpha=0.8)
     plt.xlim((-0.0, 0.21))
-    plt.ylim((0.35, 1.05))
+    plt.ylim((0.35, 1.0))
     # ticks = nus.astype('|S10')
     # ticks[0] = '1.0=kmeans'
     plt.xticks(nus, ['1', '2.5', '5', '7.5', '10', '15', '20'])
@@ -55,8 +57,8 @@ def plot_results(fname):
     plt.grid()
     plt.xlabel(r'regularization parameter $\nu$', fontsize=14)
     plt.ylabel(r'Anomaly Detection Accuracy (in AUROC)', fontsize=14)
-    names = list()
-    for i in range(maucs.shape[1]):
+    names = ['SVDD']
+    for i in range(1, maucs.shape[1]):
         names.append('ClusterSVDD (k={0})'.format(ks[i]))
     plt.legend(names, loc=4, fontsize=14)
     plt.show()
@@ -123,12 +125,12 @@ if __name__ == '__main__':
     num_train = 1000  # total number of data points is num_train+num_test
     num_test = 2000
     num_val = 400  # num_val is part of ntrain
-    use_kernels = True
+    use_kernels = False
 
     anom_frac = 0.05  # fraction of anomalies in the generated dataset
 
-    do_plot = False
-    do_evaluation = True
+    do_plot = True
+    do_evaluation = False
 
     res_filename = 'res_anom_{0}_{1}_{2}_rbf.npz'.format(reps, len(ks), len(nus))
     if not use_kernels:

@@ -31,29 +31,31 @@ def plot_results(res_filename):
     maris = foo['maris']
     saris = foo['saris']
     nus = foo['nus']
+    reps = foo['reps']
 
     plt.figure(1)
+    np.random.seed(2)
     cols = np.random.rand(maris.shape[1], 3)
-    fmts = ['-->', '--o', '--D', '--s', '--H']
+    fmts = ['-->', '-.o', '-D', '--s', '--H']
     for i in range(maris.shape[1]):
-        plt.errorbar(nus, maris[:, i], saris[:, i], fmt=fmts[i], color=cols[i, :], \
+        plt.errorbar(nus, maris[:, i], saris[:, i]/np.sqrt(reps), fmt=fmts[i], color=cols[i, :], \
                      ecolor=cols[i, :], linewidth=2.0, elinewidth=1.0, alpha=0.8)
     for i in range(maris.shape[1]):
-        plt.errorbar(nus[-1], maris[-1, i], saris[-1, i], \
-                     color='r', ecolor='r', fmt=fmts[i][-1], markersize=6, linewidth=4.0, elinewidth=4.0, alpha=0.7)
+        plt.errorbar(nus[-1], maris[-1, i], saris[-1, i]/np.sqrt(reps), \
+                     color='r', ecolor='r', fmt=fmts[i][-1], markersize=10, linewidth=4.0, elinewidth=4.0, alpha=0.7)
 
     plt.xlim((-0.05, 1.05))
-    plt.ylim((-0.05, 1.05))
-    plt.xticks([0.0, 0.25, 0.5, 0.75, 1.0], ['0.0', '0.25', '0.5', '0.75', '1.0 = k-means'], fontsize=14)
-    plt.yticks([0.0, 0.25, 0.5, 0.75, 1.0], fontsize=14)
+    plt.ylim((0.2, .8))
+    plt.xticks([0.0, 0.25, 0.5, 0.75, 1.0], ['0.0', '0.25', '0.5', '0.75', '1.0 = $k$-means'], fontsize=14)
+    # plt.yticks([0.0, 0.25, 0.5, 0.75, 1.0], fontsize=14)
     plt.grid()
     plt.xlabel(r'regularization parameter $\nu$', fontsize=14)
     plt.ylabel(r'Adjusted Rand Index (ARI)', fontsize=14)
     names = list()
     for i in range(maris.shape[1]):
         names.append('ClusterSVDD ($k$={0})'.format(ks[i]))
-    for i in range(maris.shape[1]):
-        names.append('$k$-means ($k$={0})'.format(ks[i]))
+    # for i in range(maris.shape[1]):
+    #    names.append('$k$-means ($k$={0})'.format(ks[i]))
     plt.legend(names, loc=4, fontsize=14)
 
     plt.show()
@@ -101,8 +103,8 @@ if __name__ == '__main__':
     num_train = 1000
     num_test = 2000
 
-    do_plot = False
-    do_evaluation = True
+    do_plot = True
+    do_evaluation = False
 
     res_filename = 'res_robust_{0}_{1}_{2}_rbf.npz'.format(reps, len(ks), len(nus))
 

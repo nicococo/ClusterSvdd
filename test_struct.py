@@ -15,7 +15,7 @@ def generate_seqs(lens, block_len, dims=2, proportion=0.5):
         y = 1
         start = np.random.randint(low=0, high=lens-block_len+1)
         states[start:start+block_len] = 1
-        seqs[:, start:start+block_len] = seqs[:, start:start+block_len]+1.5
+        seqs[:, start:start+block_len] = seqs[:, start:start+block_len]+0.5
     return seqs, states, y
 
 
@@ -27,7 +27,7 @@ def generate_data(datapoints, outlier_frac=0.1, dims=2, plot=True):
     idx_0 = -1
     idx_anom = -1
     for i in range(datapoints):
-        exm, states, y[i] = generate_seqs(500, 100)
+        exm, states, y[i] = generate_seqs(500, 200)
         prob = np.random.uniform()
         if prob < outlier_frac:
             idx_anom = i
@@ -201,16 +201,19 @@ def plot_results(res_filename):
     foo = np.load(res_filename)
     maris = foo['maris']
     saris = foo['saris']
+    #maris = foo['mloss']
+    #saris = foo['sloss']
     nus = foo['nus']
+    reps = foo['reps']
 
     plt.figure(1)
     cols = np.random.rand(maris.shape[1], 3)
     fmts = ['-->', '--o', '--D', '--s', '--H']
     for i in range(maris.shape[1]):
-        plt.errorbar(nus, maris[:, i], saris[:, i], fmt=fmts[i], color=cols[i, :], \
+        plt.errorbar(nus, maris[:, i], saris[:, i]/np.sqrt(reps), fmt=fmts[i], color=cols[i, :], \
                      ecolor=cols[i, :], linewidth=2.0, elinewidth=1.0, alpha=0.8)
     for i in range(maris.shape[1]):
-        plt.errorbar(nus[-1], maris[-1, i], saris[-1, i], \
+        plt.errorbar(nus[-1], maris[-1, i], saris[-1, i]/np.sqrt(reps), \
                      color='r', ecolor='r', fmt=fmts[i][-1], markersize=6, linewidth=4.0, elinewidth=4.0, alpha=0.7)
 
     plt.xlim((-0.05, 1.05))
@@ -223,8 +226,8 @@ def plot_results(res_filename):
     names = list()
     for i in range(maris.shape[1]):
         names.append('ClusterSVDD ($k$={0})'.format(ks[i]))
-    for i in range(maris.shape[1]):
-        names.append('$k$-means ($k$={0})'.format(ks[i]))
+    # for i in range(maris.shape[1]):
+    #     names.append('$k$-means ($k$={0})'.format(ks[i]))
     plt.legend(names, loc=4, fontsize=14)
 
     plt.show()
@@ -278,17 +281,15 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
 
 
 if __name__ == '__main__':
-    #nus = (np.arange(1, 21)/20.)
     nus = (np.arange(1, 11)/10.)
     ks = [1, 2, 3, 4]
-
     #nus = [1.0, 0.5]
     #ks = [1, 2]
 
     outlier_frac = 0.02  # fraction of uniform noise in the generated data
-    reps = 10  # number of repetitions for performance measures
-    num_train = 500
-    num_test = 1000
+    reps = 25  # number of repetitions for performance measures
+    num_train = 1000
+    num_test = 500
 
     do_plot = False
     do_evaluation = True

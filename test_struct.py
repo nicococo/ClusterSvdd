@@ -15,7 +15,7 @@ def generate_seqs(lens, block_len, dims=2, proportion=0.5):
         y = 1
         start = np.random.randint(low=0, high=lens-block_len+1)
         states[start:start+block_len] = 1
-        seqs[:, start:start+block_len] = seqs[:, start:start+block_len]+0.5
+        seqs[:, start:start+block_len] = seqs[:, start:start+block_len]+2.5
     return seqs, states, y
 
 
@@ -287,8 +287,8 @@ if __name__ == '__main__':
     #ks = [1, 2]
 
     outlier_frac = 0.02  # fraction of uniform noise in the generated data
-    reps = 25  # number of repetitions for performance measures
-    num_train = 1000
+    reps = 10  # number of repetitions for performance measures
+    num_train = 2000
     num_test = 500
 
     do_plot = False

@@ -24,8 +24,8 @@ def load_data_set(num_data, outlier_frac, train_inds):
     y -= np.min(y) # classes should start from zero: 0,1,2,3,...
 
     inds = np.array([], dtype='i')
-    # for i in range(int(max(y))+1):
-    for i in range(3):
+    for i in range(int(max(y))+1):
+    # for i in range(3):
         inds = np.append(inds, np.where(y == i)[0])
 
     print inds.shape
@@ -152,12 +152,12 @@ if __name__ == '__main__':
 
     nus = [1.0, 0.9, 0.05]
     nus = [1.0, 0.95, 0.9, 0.5, 0.1]
-    ks = [3]
+    ks = [26]
 
     outlier_frac = 0.05  # fraction of uniform noise in the generated data
     reps = 3  # number of repetitions for performance measures
-    num_train = 100
-    num_test = 50
+    num_train = 1000
+    num_test = 500
 
     do_plot = False
     do_evaluation = True

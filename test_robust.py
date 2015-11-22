@@ -2,56 +2,8 @@ import matplotlib.pyplot as plt
 import sklearn.metrics as metrics
 import numpy as np
 
-from svdd_dual_qp import SvddDualQP
 from svdd_primal_sgd import SvddPrimalSGD
 from cluster_svdd import ClusterSvdd
-
-
-def load_data_set(num_data, outlier_frac, train_inds):
-    from sklearn.datasets import load_svmlight_file, load_iris
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/mnist") # 10
-    X, y = load_svmlight_file("/Users/nicococo/Projects/letter.scale.txt") # 26
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/pendigits.txt") # 10
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/dna.scale.txt") # 3 binary
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/poker.txt") # 10
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/satimage.scale.txt") # 6
-
-    # data = load_iris()
-    # X = data['data']
-    # y = data['target']
-
-    print X.shape
-    y -= np.min(y) # classes should start from zero: 0,1,2,3,...
-
-    inds = np.array([], dtype='i')
-    for i in range(int(max(y))+1):
-    # for i in range(3):
-        inds = np.append(inds, np.where(y == i)[0])
-
-    print inds.shape
-    X = X.toarray()
-    X = X[inds, :]
-    y = y[inds]
-
-    inds = np.random.permutation(range(y.size))
-    X = X[inds[:num_data], :].T
-    y = y[inds[:num_data]]
-
-    #for i in range(3):
-    #    y[np.where(y==i)[0]] = -1
-
-    #X -= np.repeat(np.mean(X[:, train_inds], axis=1)[:, np.newaxis], num_data, axis=1)
-    #X /= np.max(np.abs(X[:, train_inds]))
-
-    for i in range(num_data):
-        X[:, i] /= np.linalg.norm(X[:, i], ord=2)
-
-    # anoms = int(float(num_data)*outlier_frac)
-    # X[:, :anoms] *= 10.
-    # y[:anoms] = -1
-
-    print np.unique(y)
-    return X, y
 
 
 def generate_data(datapoints, outlier_frac=0.1, dims=2):
@@ -116,9 +68,8 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
     aris = np.zeros((reps, len(nus), len(ks)))
     for n in range(reps):
         # generate new gaussians
-        # data, y = generate_data(num_train + num_test, outlier_frac=outlier_frac)
+        data, y = generate_data(num_train + num_test, outlier_frac=outlier_frac)
         inds = np.random.permutation(range(num_test + num_train))
-        data, y = load_data_set(num_train + num_test, outlier_frac, inds[:num_train])
         data = data[:, inds]
         y = y[inds]
         for k in range(len(ks)):
@@ -150,11 +101,7 @@ if __name__ == '__main__':
     nus = (np.arange(1, 21)/20.)
     ks = [2, 3, 4]
 
-    nus = [1.0, 0.9, 0.05]
-    nus = [1.0, 0.95, 0.9, 0.5, 0.1]
-    ks = [26]
-
-    outlier_frac = 0.05  # fraction of uniform noise in the generated data
+    outlier_frac = 0.15  # fraction of uniform noise in the generated data
     reps = 3  # number of repetitions for performance measures
     num_train = 1000
     num_test = 500

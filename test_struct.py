@@ -7,15 +7,18 @@ from cluster_svdd import ClusterSvdd
 
 
 def generate_seqs(lens, block_len, dims=2, proportion=0.5):
-    seqs = 1.0*np.random.randn(dims, lens)
+
+    classes = np.random.randint(0,2)
+    seqs = 1.*np.random.randn(dims, lens)*(classes+1.)
     states = np.zeros(lens, dtype='i')
-    y = 0
-    prob = np.random.uniform()
-    if prob < proportion:
-        y = 1
-        start = np.random.randint(low=0, high=lens-block_len+1)
-        states[start:start+block_len] = 1
-        seqs[:, start:start+block_len] = seqs[:, start:start+block_len]+2.5
+    y = classes
+    # prob = np.random.uniform()
+    # if prob < proportion:
+    #     y = 1
+    start = np.random.randint(low=0, high=lens-block_len+1)
+    states[start:start+block_len] = 1
+    seqs[:, start:start+block_len] = seqs[:, start:start+block_len]+2.*classes
+
     return seqs, states, y
 
 
@@ -27,12 +30,13 @@ def generate_data(datapoints, outlier_frac=0.1, dims=2, plot=True):
     idx_0 = -1
     idx_anom = -1
     for i in range(datapoints):
-        exm, states, y[i] = generate_seqs(500, 200)
+        exm, states, y[i] = generate_seqs(50, 20, dims=dims)
         prob = np.random.uniform()
         if prob < outlier_frac:
             idx_anom = i
-            exm *= np.random.uniform(low=-0.1,high=+0.1, size=(dims, 500))
+            exm *= np.random.uniform(low=-0.1,high=+0.1, size=(dims, 50))
             exm *= np.exp(10.0*exm)
+            y[i] = -1
         if y[i] == 0:
             idx_0 = i
         if y[i] == 1:
@@ -43,24 +47,24 @@ def generate_data(datapoints, outlier_frac=0.1, dims=2, plot=True):
     if plot:
         plt.figure(1)
         plt.subplot(1, 3, 1)
-        plt.plot(range(500), X[idx_0][0,:], '-r', alpha=0.7)
-        plt.plot(range(500), S[idx_0], '-b', linewidth=2.0)
+        plt.plot(range(50), X[idx_0][0,:], '-r', alpha=0.7)
+        plt.plot(range(50), S[idx_0], '-b', linewidth=2.0)
         plt.ylim((-6.5, 6.5))
         plt.title('Class 0', fontsize=14)
         plt.xlabel('Sequence index', fontsize=14)
         plt.ylabel('Feature 0', fontsize=14)
 
         plt.subplot(1, 3, 2)
-        plt.plot(range(500), X[idx_1][0,:], '-r', alpha=0.7)
-        plt.plot(range(500), S[idx_1], '-b', linewidth=2.0)
+        plt.plot(range(50), X[idx_1][0,:], '-r', alpha=0.7)
+        plt.plot(range(50), S[idx_1], '-b', linewidth=2.0)
         plt.ylim((-6.5, 6.5))
         plt.title('Class 1', fontsize=14)
         plt.xlabel('Sequence index', fontsize=14)
         plt.ylabel('Feature 0', fontsize=14)
 
         plt.subplot(1, 3, 3)
-        plt.plot(range(500), X[idx_anom][0,:], '-r', alpha=0.7)
-        plt.plot(range(500), S[idx_anom], '-b', linewidth=2.0)
+        plt.plot(range(50), X[idx_anom][0,:], '-r', alpha=0.7)
+        plt.plot(range(50), S[idx_anom], '-b', linewidth=2.0)
         plt.ylim((-6.5, 6.5))
         plt.title('Anomalous Data', fontsize=14)
         plt.xlabel('Sequence index', fontsize=14)
@@ -78,7 +82,6 @@ def preprocess_training_data(data_seqs, state_seqs, train_inds):
     phi = np.zeros((2*2 + F*2, N))
     for n in train_inds:
         phi[:, n] = get_joint_feature_map(data_seqs[n], state_seqs[n])
-        # phi[:, n] = argmax(sol, data_seqs[n])
         phi[:, n] /= np.linalg.norm(phi[:, n], ord=2)
     return phi
 
@@ -105,6 +108,7 @@ def preprocess_test_data(csvdd, X, S, inds):
         for n in range(N):
             sol = csvdd.svdds[k].c
             phis[:, n], states[n] = argmax(sol, X[inds[n]])
+            # states[n] = true_states[n]
             phis[:, n] /= np.linalg.norm(phis[:, n], ord=2)
 
         scores = csvdd.svdds[k].predict(phis)
@@ -183,13 +187,12 @@ def get_joint_feature_map(X, y):
     N = 2
     F = X.shape[0]
     jfm = np.zeros(N*N + N*F)
-
     # transition part
     for i in range(N):
-        _, inds = np.where([y[1:T]==i])
+        inds = np.where(y[1:T]==i)[0]
         for j in range(N):
-            _, indsj = np.where([y[inds]==j])
-            jfm[j*N+i] = float(indsj.size)
+            indsj = np.where(y[inds]==j)[0]
+            jfm[j*N+i] = float(indsj.size)/float(N)
     # emission parts
     for t in range(T):
         for f in range(F):
@@ -241,11 +244,13 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
     loss = np.zeros((reps, len(nus), len(ks)))
     for n in range(reps):
         # generate new gaussians
-        X, S, y = generate_data(num_train + num_test, outlier_frac=outlier_frac, dims=2, plot=False)
+        X, S, y = generate_data(num_train + num_test, outlier_frac=outlier_frac, dims=1, plot=True)
         inds = np.random.permutation(range(num_test + num_train))
         data = preprocess_training_data(X, S, inds[:num_train])
         data = data[:, inds]
         y = y[inds]
+        print data
+        print y
         for k in range(len(ks)):
             # fix the initialization for all methods
             membership = np.random.randint(0, ks[k], y.size)
@@ -268,11 +273,13 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
 
     maris = np.mean(aris, axis=0)
     saris = np.std(aris, axis=0)
+    print 'ARI'
     print np.mean(aris, axis=0)
     print np.std(aris, axis=0)
 
     mloss = np.mean(loss, axis=0)
     sloss = np.std(loss, axis=0)
+    print 'Normalized Hamming Distance'
     print np.mean(loss, axis=0)
     print np.std(loss, axis=0)
 
@@ -283,12 +290,12 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
 if __name__ == '__main__':
     nus = (np.arange(1, 11)/10.)
     ks = [1, 2, 3, 4]
-    #nus = [1.0, 0.5]
-    #ks = [1, 2]
+    nus = [1.0, 0.5, 0.01]
+    ks = [1, 3]
 
-    outlier_frac = 0.02  # fraction of uniform noise in the generated data
-    reps = 10  # number of repetitions for performance measures
-    num_train = 2000
+    outlier_frac = 0.0  # fraction of uniform noise in the generated data
+    reps = 1  # number of repetitions for performance measures
+    num_train = 1000
     num_test = 500
 
     do_plot = False

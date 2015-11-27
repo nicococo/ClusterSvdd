@@ -176,7 +176,8 @@ if __name__ == '__main__':
     nus = [1.0, 0.95, 0.9, 0.5, 0.1]
     nus = [1.0, 0.95, 0.9, 0.5, 0.1, 0.01]
     # ks = [1, 5, 7, 10, 14] # segment
-    ks = [1, 3, 6, 9] # satimage
+    # ks = [1, 3, 6, 9] # satimage
+    ks = [1, 2, 4] # gisette
 
     outlier_fracs = [0.0, 0.02, 0.05, 0.1, 0.15]  # fraction of uniform noise in the generated data
     reps = 10  # number of repetitions for performance measures
@@ -184,12 +185,17 @@ if __name__ == '__main__':
     # num_test = 1155
     # num_val = 250
 
-    num_train = 2217
-    num_test = 2218
-    num_val = 400
+    # num_train = 2217
+    # num_test = 2218
+    # num_val = 400
+
+    num_train = 3000
+    num_test = 3000
+    num_val = 600
 
     # dataset_name = "../segment.scale.txt" # 7c
-    dataset_name = "../satimage.scale.txt" # 6c
+    # dataset_name = "../satimage.scale.txt" # 6c
+    dataset_name = "../gisette.scale.txt" # 2c
     res_filename = 'res_real_{0}_{1}.npz'.format(reps, dataset_name[3:])
 
     # res: 0:AUC-SVDD, 1:AUC-CSVDD, 2:ARI-KMEANS, 3:ARI-CSVDD

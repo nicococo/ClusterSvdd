@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import sklearn.metrics as metrics
 import numpy as np
 
@@ -7,28 +6,13 @@ from cluster_svdd import ClusterSvdd
 
 
 def load_data_set(fname, num_data, outlier_frac, train_inds):
-    from sklearn.datasets import load_svmlight_file, load_iris
+    from sklearn.datasets import load_svmlight_file
     X, y = load_svmlight_file(fname)
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/mnist") # 10
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/letter.scale.txt") # 26
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/pendigits.txt") # 10  integer features
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/dna.scale.txt") # 3 binary
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/poker.txt") # 10
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/satimage.scale.txt") # 6
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/segment.scale.txt") # 7
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/news20.scale.txt") # 20, 15,935exm, 62,061feats
-    # X, y = load_svmlight_file("/Users/nicococo/Projects/gisette.scale.txt") # 2, 6.000exm, 5.000feats
-
-    # data = load_iris()
-    # X = data['data']
-    # y = data['target']
 
     print X.shape
     y -= np.min(y) # classes should start from zero: 0,1,2,3,...
-
     inds = np.array([], dtype='i')
     for i in range(int(max(y))+1):
-    # for i in range(3,7):
         inds = np.append(inds, np.where(y == i)[0])
 
     print inds.shape
@@ -40,28 +24,10 @@ def load_data_set(fname, num_data, outlier_frac, train_inds):
     X = X[inds[:num_data], :].T
     y = y[inds[:num_data]]
 
-    # X -= np.repeat(np.mean(X[:, train_inds], axis=1)[:, np.newaxis], num_data, axis=1)
-    # X /= np.repeat(np.var(X[:, train_inds], axis=1)[:, np.newaxis], num_data, axis=1)
-    # X /= np.max(np.abs(X[:, train_inds]))
-
-    #for i in range(num_data):
-    #    X[:, i] /= np.linalg.norm(X[:, i], ord=2)
-
+    # induce anomalies
     anoms = int(float(num_data)*outlier_frac)
-    # ainds = np.where(y == 9)[0]
-    # X[:, ainds[:anoms]] *= 10.
-    # y[ainds[:anoms]] = -1
-    # X[0:5, :anoms] *= 10.
     X[:, :anoms] = np.random.rand(X.shape[0], anoms)*2.-1.
     y[:anoms] = -1
-    # X[:, :anoms] -= np.repeat(np.mean(X[:, :anoms], axis=1)[:, np.newaxis], anoms, axis=1)
-    #X[:, :anoms] /= np.max(np.abs(X[:, :anoms]))
-
-    # plt.figure(1)
-    # sinds = np.argsort(y)
-    # K = X[:, sinds].T.dot(X[:, sinds])
-    # plt.imshow(K)
-    # plt.show()
 
     print np.unique(y)
     return X, y
@@ -169,33 +135,24 @@ def evaluate(res_filename, dataset, nus, ks, outlier_frac, reps, num_train, num_
     return res, res_stds
 
 if __name__ == '__main__':
-    nus = (np.arange(1, 21)/20.)
-    ks = [2, 3, 4]
-
-    nus = [1.0, 0.9, 0.05]
-    nus = [1.0, 0.95, 0.9, 0.5, 0.1]
-    nus = [1.0, 0.95, 0.9, 0.5, 0.1, 0.01]
-    # ks = [1, 5, 7, 10, 14] # segment
-    # ks = [1, 3, 6, 9] # satimage
-    ks = [1, 2, 4] # gisette
-
-    outlier_fracs = [0.0, 0.02, 0.05, 0.1, 0.15]  # fraction of uniform noise in the generated data
-    reps = 10  # number of repetitions for performance measures
-    # num_train = 1155
-    # num_test = 1155
-    # num_val = 250
-
-    # num_train = 2217
-    # num_test = 2218
-    # num_val = 400
-
-    num_train = 3000
-    num_test = 3000
-    num_val = 600
-
-    # dataset_name = "../segment.scale.txt" # 7c
+    dataset_name = "../segment.scale.txt" # 7c
     # dataset_name = "../satimage.scale.txt" # 6c
-    dataset_name = "../gisette.scale.txt" # 2c
+
+    nus = [1.0, 0.95, 0.9, 0.5, 0.1, 0.01]
+    outlier_fracs = [0.0, 0.02, 0.05, 0.1, 0.15]  # fraction of uniform noise in the generated data
+    reps = 1  # number of repetitions for performance measures
+
+    ks = [1, 5, 7, 10, 14] # segment
+    num_train = 1155
+    num_test = 1155
+    num_val = 250
+
+    if 'satimage' in dataset_name:
+        ks = [1, 3, 6, 9]
+        num_train = 2217
+        num_test = 2218
+        num_val = 400
+
     res_filename = 'res_real_{0}_{1}.npz'.format(reps, dataset_name[3:])
 
     # res: 0:AUC-SVDD, 1:AUC-CSVDD, 2:ARI-KMEANS, 3:ARI-CSVDD

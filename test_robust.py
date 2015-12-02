@@ -21,7 +21,7 @@ def generate_data(datapoints, outlier_frac=0.1, dims=2):
     y[cnt:cnt+num_dpc] = 1
     cnt += num_dpc
 
-    X[:, cnt:] = 0.5*np.random.randn(dims, num_dpc) + 1.
+    X[:, cnt:] = 0.5*np.random.randn(dims, y.size-cnt) + 1.
     y[cnt:] = 2
     return X, y
 
@@ -47,17 +47,13 @@ def plot_results(res_filename):
     plt.xlim((-0.05, 1.05))
     plt.ylim((0.2, .8))
     plt.xticks([0.0, 0.25, 0.5, 0.75, 1.0], ['0.0', '0.25', '0.5', '0.75', '1.0 = $k$-means'], fontsize=14)
-    # plt.yticks([0.0, 0.25, 0.5, 0.75, 1.0], fontsize=14)
     plt.grid()
     plt.xlabel(r'regularization parameter $\nu$', fontsize=14)
     plt.ylabel(r'Adjusted Rand Index (ARI)', fontsize=14)
     names = list()
     for i in range(maris.shape[1]):
         names.append('ClusterSVDD ($k$={0})'.format(ks[i]))
-    # for i in range(maris.shape[1]):
-    #    names.append('$k$-means ($k$={0})'.format(ks[i]))
     plt.legend(names, loc=4, fontsize=14)
-
     plt.show()
 
 
@@ -79,7 +75,6 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
                 svdds = list()
                 for l in range(ks[k]):
                     svdds.append(SvddPrimalSGD(nus[i]))
-                    #svdds.append(SvddDualQP('rbf', 0.8, nus[i]))
                 svdd = ClusterSvdd(svdds)
                 svdd.fit(data[:, train].copy(), init_membership=membership[train])
                 _, classes = svdd.predict(data[:, test].copy())
@@ -106,7 +101,7 @@ if __name__ == '__main__':
     num_train = 1000
     num_test = 500
 
-    do_plot = False
+    do_plot = True
     do_evaluation = True
 
     res_filename = 'res_robust_{0}_{1}_{2}.npz'.format(reps, len(ks), len(nus))

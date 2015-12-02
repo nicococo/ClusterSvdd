@@ -1,6 +1,9 @@
 import matplotlib.pyplot as plt
 import sklearn.metrics as metrics
 import numpy as np
+import time as time
+
+from numba import autojit
 
 from svdd_primal_sgd import SvddPrimalSGD
 from cluster_svdd import ClusterSvdd
@@ -99,7 +102,8 @@ def preprocess_test_data(csvdd, X, S, inds):
         phis = np.zeros((2*2 + F*2, N))
         for n in range(N):
             sol = csvdd.svdds[k].c
-            phis[:, n], states[n] = argmax(sol, X[inds[n]])
+            states[n] = argmax(sol, X[inds[n]])
+            phis[:, n] = get_joint_feature_map(X[inds[n]], states[n])
             # states[n] = true_states[n]
             phis[:, n] /= np.linalg.norm(phis[:, n], ord=2)
 
@@ -112,7 +116,6 @@ def preprocess_test_data(csvdd, X, S, inds):
 
     return pred_phis, true_states, pred_states
 
-
 def hamming_loss(y_true, y_pred):
     N = len(y_pred)
     loss = 0.0
@@ -121,6 +124,7 @@ def hamming_loss(y_true, y_pred):
     return loss / float(N)
 
 
+@autojit(nopython=True)
 def argmax(sol, X):
     # if labels are present, then argmax will solve
     # the loss augmented programm
@@ -128,52 +132,60 @@ def argmax(sol, X):
     N = 2
 
     # get transition matrix from current solution
-    A = np.zeros((N, N))
-    for i in xrange(N):
-        for j in xrange(N):
+    A = np.zeros((N, N), dtype=np.double)
+    for i in range(N):
+        for j in range(N):
             A[i, j] = sol[i*N+j]
 
     # calc emission matrix from current solution, data points and
     F = X.shape[0]
     em = np.zeros((N, T))
-    for t in xrange(T):
-        for s in xrange(N):
+    for t in range(T):
+        for s in range(N):
             for f in xrange(F):
                 em[s, t] += sol[N*N + s*F + f] * X[f, t]
 
     delta = np.zeros((N, T))
-    psi = np.zeros((N, T), dtype='i')
+    psi = np.zeros((N, T), dtype=np.int8)
     # initialization
     for i in xrange(N):
         # use equal start probs for each state
         delta[i, 0] = 0. + em[i, 0]
 
     # recursion
-    for t in xrange(1,T):
-        for i in xrange(N):
-            foo = delta[:, t-1] + A[:, i] + em[i, t]
-            psi[i, t] = np.argmax(foo)
-            delta[i, t] = foo[psi[i, t]]
+    for t in range(1, T):
+        for i in range(N):
+            foo_argmax = 0
+            foo_max = -1e16
+            for l in range(N):
+                foo = delta[l, t-1] + A[l, i] + em[i, t]
+                if foo > foo_max:
+                    foo_max = foo
+                    foo_argmax = l
+            psi[i, t] = foo_argmax
+            delta[i, t] = foo_max
 
-    states = np.zeros(T, dtype='i')
+    states = np.zeros(T, dtype=np.int8)
     states[T-1] = np.argmax(delta[:, T-1])
 
-    for t in reversed(xrange(1, T)):
+    # for t in reversed(xrange(1, T)):
+    for t in range(T-1, 0, -1):
         states[t-1] = psi[states[t], t]
-    return get_joint_feature_map(X, states), states
+    return states
 
 
+@autojit(nopython=True)
 def get_joint_feature_map(X, y):
     N = 2
     T = y.size
     F = X.shape[0]
     jfm = np.zeros(N*N + N*F)
     # transition part
-    for i in range(N):
-        inds = np.where(y[1:T]==i)[0]
-        for j in range(N):
-            indsj = np.where(y[inds]==j)[0]
-            jfm[j*N+i] = float(indsj.size)/float(N)
+    for t in range(T-1):
+        for i in range(N):
+            for j in range(N):
+                if y[t]==i and y[t+1]==j:
+                    jfm[j*N+i] += 1
     # emission parts
     for t in range(T):
         for f in range(F):
@@ -244,8 +256,12 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
                 svdd = ClusterSvdd(svdds)
                 svdd.fit(data[:, train], init_membership=membership[train])
 
+                stime = time.time()
                 pred_phis, true_states, pred_states = preprocess_test_data(svdd, X, S, inds[num_train:])
                 _, classes = svdd.predict(pred_phis)
+                print '---------------- TIME'
+                print time.time()-stime
+                print '----------------'
 
                 # evaluate clustering abilities
                 ninds = np.where(y[test] >= 0)[0]
@@ -271,8 +287,6 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
 
 
 if __name__ == '__main__':
-    nus = (np.arange(1, 11)/10.)
-    ks = [1, 2, 3, 4]
     nus = [1.0, 0.9, 0.5, 0.1, 0.01]
     ks = [1, 3]
 
@@ -282,7 +296,7 @@ if __name__ == '__main__':
     num_test = 500
 
     do_plot = True
-    do_evaluation = False
+    do_evaluation = True
 
     res_filename = 'res_struct_{0}_{1}_{2}.npz'.format(reps, len(ks), len(nus))
 

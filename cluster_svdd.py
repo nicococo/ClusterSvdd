@@ -1,6 +1,7 @@
 __author__ = 'nicococo'
 import numpy as np
 
+
 class ClusterSvdd:
     """ Implementation of the cluster support vector data description (ClusterSVDD).
         Author: Nico Goernitz, TU Berlin, 2015
@@ -53,7 +54,6 @@ class ClusterSvdd:
                         self.svdds[c].nu = new_nu
                     self.svdds[c].fit(X[:, inds], max_iter=max_svdd_iter)
             iter += 1
-
         print('ClusterSVDD training finished after {0} iterations.'.format(iter))
         return cinds
 

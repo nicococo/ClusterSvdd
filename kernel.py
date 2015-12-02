@@ -1,5 +1,7 @@
 import numpy as np
 
+from profilehooks import profile
+
 class Kernel:
 
     def __init__(self):

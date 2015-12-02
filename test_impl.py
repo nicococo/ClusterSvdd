@@ -1,5 +1,5 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 from svdd_dual_qp import SvddDualQP
 from svdd_primal_sgd import SvddPrimalSGD
@@ -9,7 +9,8 @@ if __name__ == '__main__':
     nu = 0.15  # outlier fraction
 
     # generate raw training data
-    Dtrain = np.random.randn(2, 1200)
+    Dtrain = np.random.randn(2, 1000)
+    Dtrain /= np.max(np.abs(Dtrain))
 
     # train dual svdd
     svdd = SvddDualQP('linear', 0.1, nu)
@@ -17,7 +18,7 @@ if __name__ == '__main__':
 
     # train primal svdd
     psvdd = SvddPrimalSGD(nu)
-    psvdd.fit(Dtrain)
+    psvdd.fit(Dtrain, max_iter=1000, prec=1e-4)
 
     # print solutions
     print('\n  dual-svdd: obj={0}  T={1}.'.format(svdd.pobj, svdd.radius2))
@@ -25,8 +26,8 @@ if __name__ == '__main__':
 
     # generate test data grid
     delta = 0.1
-    x = np.arange(-4.0-delta, 4.0+delta, delta)
-    y = np.arange(-4.0-delta, 4.0+delta, delta)
+    x = np.arange(-2.0-delta, 2.0+delta, delta)
+    y = np.arange(-2.0-delta, 2.0+delta, delta)
     X, Y = np.meshgrid(x, y)
     (sx, sy) = X.shape
     Xf = np.reshape(X,(1, sx*sy))
@@ -48,10 +49,10 @@ if __name__ == '__main__':
     plt.contour(X, Y, Z, [0.0], linewidths=3.0, colors='k')
     plt.scatter(Dtrain[0, svdd.get_support_inds()], Dtrain[1, svdd.get_support_inds()], 40, c='k')
     plt.scatter(Dtrain[0, :], Dtrain[1, :],10)
-    plt.xlim((-4., 4.))
-    plt.ylim((-4., 4.))
-    plt.yticks(range(-4, 4), [])
-    plt.xticks(range(-4, 4), [])
+    plt.xlim((-2., 2.))
+    plt.ylim((-2., 2.))
+    plt.yticks(range(-2, 2), [])
+    plt.xticks(range(-2, 2), [])
 
     plt.subplot(1, 2, 2)
     plt.title('Primal Subgradient SVDD')
@@ -59,10 +60,10 @@ if __name__ == '__main__':
     plt.contourf(X, Y, Z)
     plt.contour(X, Y, Z, [0.0], linewidths=3.0, colors='k')
     plt.scatter(Dtrain[0, :], Dtrain[1, :], 10)
-    plt.xlim((-4., 4.))
-    plt.ylim((-4., 4.))
-    plt.yticks(range(-4, 4), [])
-    plt.xticks(range(-4, 4), [])
+    plt.xlim((-2., 2.))
+    plt.ylim((-2., 2.))
+    plt.yticks(range(-2, 2), [])
+    plt.xticks(range(-2, 2), [])
 
     plt.show()
 

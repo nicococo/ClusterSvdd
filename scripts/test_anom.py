@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import sklearn.metrics as metrics
 import numpy as np
 
-from svdd_dual_qp import SvddDualQP
-from svdd_primal_sgd import SvddPrimalSGD
-from cluster_svdd import ClusterSvdd
+from ClusterSVDD.svdd_dual_qp import SvddDualQP
+from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
+from ClusterSVDD.cluster_svdd import ClusterSvdd
 
 
 def generate_data(datapoints, outlier_frac=0.1, dims=2):

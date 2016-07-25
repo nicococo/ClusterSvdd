@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from svdd_primal_sgd import SvddPrimalSGD
-from svdd_dual_qp import SvddDualQP
-from cluster_svdd import ClusterSvdd
+from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
+from ClusterSVDD.svdd_dual_qp import SvddDualQP
+from ClusterSVDD.cluster_svdd import ClusterSvdd
 
 
 def generate_gaussians(datapoints, cluster, noise_frac=0.1, dims=2,

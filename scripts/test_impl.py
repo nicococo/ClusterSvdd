@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from svdd_dual_qp import SvddDualQP
-from svdd_primal_sgd import SvddPrimalSGD
+from ClusterSVDD.svdd_dual_qp import SvddDualQP
+from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
 
 
 if __name__ == '__main__':

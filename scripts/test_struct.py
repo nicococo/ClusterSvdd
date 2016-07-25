@@ -5,8 +5,8 @@ import time as time
 
 from numba import autojit
 
-from svdd_primal_sgd import SvddPrimalSGD
-from cluster_svdd import ClusterSvdd
+from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
+from ClusterSVDD.cluster_svdd import ClusterSvdd
 
 
 def generate_seqs(lens, block_len, cluster=3, dims=3):

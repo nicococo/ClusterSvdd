@@ -6,8 +6,8 @@ class ClusterSvdd:
     """ Implementation of the cluster support vector data description (ClusterSVDD).
         Author: Nico Goernitz, TU Berlin, 2015
     """
-
-    PRECISION = 1e-4 # important: effects the threshold, support vectors and speed!
+    PRECISION = 1e-4  # This parameter can be important as it effects the threshold,
+                      # support vectors and speed!
     clusters = 0     # (scalar) number of clusters
     svdds = None     # (list) list of dual qp svdds
     nu = -1.0        # (scalar) 0 < nu <= 1.0
@@ -21,13 +21,22 @@ class ClusterSvdd:
         self.use_local_fraction = nu <= 0.
         print('Creating new ClusterSVDD with {0} clusters.'.format(self.clusters))
 
-    def fit(self, X, min_chg=0, max_iter=40, max_svdd_iter=2000, init_membership=None):
+    def fit(self, X, min_chg=0.0, max_iter=40, max_svdd_iter=2000, init_membership=None):
+        """
+        :param X: Data matrix is assumed to be feats x samples.
+        :param min_chg: Minimum percent of changes per iteration before stopping.
+        :param max_iter: Maximum number of iteration before stopping.
+        :param max_svdd_iter: Maximum number of iterations for nested SVDDs.
+        :param init_membership: Integer array with cluster affiliation per
+                                sample (used for initialization).
+        :return: (Integer array ) Cluster affiliations for all samples.
+        """
         (dims, samples) = X.shape
 
         # init majorization step
         cinds_old = np.zeros(samples)
         cinds = np.random.randint(0, self.clusters, samples)
-        if not init_membership is None:
+        if init_membership is not None:
             print('Using init cluster membership.')
             cinds = init_membership
 
@@ -36,10 +45,10 @@ class ClusterSvdd:
             inds = np.where(cinds == c)[0]
             self.svdds[c].fit(X[:, inds])
 
-        iter = 0
+        iter_cnt = 0
         scores = np.zeros((self.clusters, samples))
-        while np.sum(np.abs(cinds_old-cinds))>min_chg and iter < max_iter:
-            print('Iter={0}'.format(iter))
+        while np.sum(np.abs(cinds_old-cinds))/np.float(samples) > min_chg and iter_cnt < max_iter:
+            print('Iter={0}'.format(iter_cnt))
             # 1. majorization step
             for c in range(self.clusters):
                 scores[c, :] = self.svdds[c].predict(X)
@@ -53,11 +62,15 @@ class ClusterSvdd:
                         new_nu = float(samples) * self.nu / float(inds.size)
                         self.svdds[c].nu = new_nu
                     self.svdds[c].fit(X[:, inds], max_iter=max_svdd_iter)
-            iter += 1
-        print('ClusterSVDD training finished after {0} iterations.'.format(iter))
+            iter_cnt += 1
+        print('ClusterSVDD training finished after {0} iterations.'.format(iter_cnt))
         return cinds
 
     def predict(self, Y):
+        """
+        :param Y:
+        :return:
+        """
         scores = np.zeros((self.clusters, Y.shape[1]))
         for c in range(self.clusters):
             scores[c, :] = self.svdds[c].predict(Y)

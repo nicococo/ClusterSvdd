@@ -9,7 +9,7 @@ class SvddDualQP:
         Author: Nico Goernitz, TU Berlin, 2015
     """
 
-    PRECISION = 1e-4 # important: effects the threshold, support vectors and speed!
+    PRECISION = 1e-4  # important: effects the threshold, support vectors and speed!
 
     kernel = None 	# (string) name of the kernel to use
     kparam = None 	# (-) kernel parameter
@@ -18,9 +18,9 @@ class SvddDualQP:
     nu = 0.95	    # (scalar) the regularization constant > 0
 
     X = None        # (matrix) training data
-    alphas = None	# (vector) dual solution vector
+    alphas = None   # (vector) dual solution vector
     svs = None      # (vector) support vector indices
-    radius2 = 0.0	# (scalar) the optimized threshold (rho)
+    radius2 = 0.0   # (scalar) the optimized threshold (rho)
     cTc = None      # (vector) alphaT*K*alpha for support vectors only
 
     pobj = 0.0      # (scalar) primal objective value after training
@@ -32,24 +32,28 @@ class SvddDualQP:
         print('Creating new dual QP SVDD ({0}) with nu={1}.'.format(kernel, nu))
 
     def fit(self, X, max_iter=-1):
-        # max_iter is *ignored*, just for compatibility
+        """
+        :param X: Data matrix is assumed to be feats x samples.
+        :param max_iter: *ignored*, just for compatibility.
+        :return: Alphas and threshold for dual SVDDs.
+        """
         self.X = X
-        (dims, self.samples) = X.shape
+        dims, self.samples = X.shape
 
-        if (self.samples<1):
+        if self.samples < 1:
             print('Invalid training data.')
             return -1
 
         # number of training examples
         N = self.samples
-        C = 1./(self.samples*self.nu)
+        C = 1. / (self.samples*self.nu)
 
         kernel = Kernel.get_kernel(X, X, self.kernel, self.kparam)
         norms = np.diag(kernel).copy()
 
         if self.nu >= 1.0:
             print("Center-of-mass solution.")
-            self.alphas = np.ones(self.samples)/float(self.samples)
+            self.alphas = np.ones(self.samples) / float(self.samples)
             self.radius2 = 0.0
             self.svs = np.array(range(self.samples), dtype='i')
             self.pobj = 0.0  # TODO: calculate real primal objective
@@ -63,15 +67,15 @@ class SvddDualQP:
         q = matrix(norms)
 
         # sum_i alpha_i = A alpha = b = 1.0
-        A = matrix(1.0, (1,N))
-        b = matrix(1.0, (1,1))
+        A = matrix(1.0, (1, N))
+        b = matrix(1.0, (1, 1))
 
         # 0 <= alpha_i <= h = C
         G1 = spmatrix(1.0, range(N), range(N))
         G = sparse([G1, -G1])
-        h1 = matrix(C, (N,1))
-        h2 = matrix(0.0, (N,1))
-        h = matrix([h1,h2])
+        h1 = matrix(C, (N, 1))
+        h2 = matrix(0.0, (N, 1))
+        h = matrix([h1, h2])
 
         sol = qp(P, -q, G, h, A, b)
 

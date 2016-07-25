@@ -1,8 +1,8 @@
 import sklearn.metrics as metrics
 import numpy as np
 
-from svdd_primal_sgd import SvddPrimalSGD
-from cluster_svdd import ClusterSvdd
+from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
+from ClusterSVDD.cluster_svdd import ClusterSvdd
 
 
 def load_data_set(fname, num_data, outlier_frac, train_inds):

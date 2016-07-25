@@ -85,6 +85,7 @@ def train(cluster, data, nu, membership, use_primal=True):
 
 if __name__ == '__main__':
     nus = [1.0, 0.9, 0.5, 0.1]   # outlier fractions
+    nus = [0.1]
     cluster = 3  # 'k' number of clusters for the methods
     cluster_real = 3  # number of clusters to create in the data generation process
     use_primal = False  # use primal sgd svdd or dual kernel qp

@@ -96,9 +96,12 @@ if __name__ == '__main__':
     nus = (np.arange(1, 21)/20.)
     ks = [2, 3, 4]
 
-    outlier_frac = 0.15  # fraction of uniform noise in the generated data
+    ks = [3]
+    nus = [0.05]
+
+    outlier_frac = 0.05  # fraction of uniform noise in the generated data
     reps = 3  # number of repetitions for performance measures
-    num_train = 1000
+    num_train = 500
     num_test = 500
 
     do_plot = True

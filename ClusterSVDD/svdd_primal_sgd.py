@@ -8,10 +8,10 @@ class SvddPrimalSGD(object):
     """ Primal subgradient descent solver for the support vector data description (SVDD).
         Author: Nico Goernitz, TU Berlin, 2015
     """
-    PRECISION = 10**-3 # important: effects the threshold, support vectors and speed!
+    PRECISION = 10**-3  # important: effects the threshold, support vectors and speed!
     nu = 0.95	    # (scalar) the regularization constant > 0
     c = None        # (vecor) center of the hypersphere
-    radius2 = 0.0	# (scalar) the optimized threshold (rho)
+    radius2 = 0.0   # (scalar) the optimized threshold (rho)
     pobj = 0.0      # (scalar) primal objective after training
 
     def __init__(self, nu):
@@ -19,7 +19,7 @@ class SvddPrimalSGD(object):
         print('Creating new primal SVDD with nu={0}.'.format(nu))
 
     @autojit
-    def fit(self, X, max_iter=20000, prec=1e-6, rate=0.001):
+    def fit(self, X, max_iter=20000, prec=1e-6, rate=0.01):
         if X.shape[1] < 1:
             print('Invalid training data.')
             return -1, -1
@@ -118,7 +118,7 @@ def fit_extern(X, nu, max_iter, prec, rate):
         obj_bak = obj
 
         # stepsize should be not more than 0.1 % of the maximum value encountered in dist
-        max_change = rate * np.max(dist)
+        max_change = rate * np.max(dist) / np.float(iter+1)*10.
 
         # gradient step for threshold
         dT = 1.0 - reg*np.float(inds_size)

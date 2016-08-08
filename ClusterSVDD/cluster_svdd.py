@@ -12,8 +12,6 @@ class ClusterSvdd:
     svdds = None     # (list) list of dual qp svdds
     nu = -1.0        # (scalar) 0 < nu <= 1.0
 
-    use_local_fraction = True
-
     def __init__(self, svdds, nu=-1.0):
         self.clusters = len(svdds)
         self.svdds = svdds
@@ -58,9 +56,8 @@ class ClusterSvdd:
             for c in range(self.clusters):
                 inds = np.where(cinds == c)[0]
                 if inds.size > 0:
-                    if not self.use_local_fraction:
-                        new_nu = float(samples) * self.nu / float(inds.size)
-                        self.svdds[c].nu = new_nu
+                    # perc = 2.0*np.float(inds.size)/np.float(samples)
+                    # self.svdds[c].nu = perc * self.nu
                     self.svdds[c].fit(X[:, inds], max_iter=max_svdd_iter)
             iter_cnt += 1
         print('ClusterSVDD training finished after {0} iterations.'.format(iter_cnt))

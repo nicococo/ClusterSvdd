@@ -4,6 +4,7 @@ import numpy as np
 
 from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
 from ClusterSVDD.cluster_svdd import ClusterSvdd
+from ClusterSVDD.svdd_dual_qp import SvddDualQP
 
 
 def generate_data(datapoints, outlier_frac=0.1, dims=2):
@@ -46,7 +47,7 @@ def plot_results(res_filename):
 
     plt.xlim((-0.05, 1.05))
     plt.ylim((0.2, .8))
-    plt.xticks([0.0, 0.25, 0.5, 0.75, 1.0], ['0.0', '0.25', '0.5', '0.75', '1.0 = $k$-means'], fontsize=14)
+    plt.xticks([0.0, 0.25, 0.5, 0.75, 1.0], ['0.0', '0.25', '0.5', '0.75', '1.0 \n= Kernel $k$-means'], fontsize=14)
     plt.grid()
     plt.xlabel(r'regularization parameter $\nu$', fontsize=14)
     plt.ylabel(r'Adjusted Rand Index (ARI)', fontsize=14)
@@ -57,7 +58,7 @@ def plot_results(res_filename):
     plt.show()
 
 
-def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
+def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test, use_primal=True):
     train = np.array(range(num_train), dtype='i')
     test = np.array(range(num_train, num_train + num_test), dtype='i')
 
@@ -74,7 +75,10 @@ def evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test):
             for i in range(len(nus)):
                 svdds = list()
                 for l in range(ks[k]):
-                    svdds.append(SvddPrimalSGD(nus[i]))
+                    if use_primal:
+                        svdds.append(SvddPrimalSGD(nus[i]))
+                    else:
+                        svdds.append(SvddDualQP('rbf', 10.0, nus[i]))
                 svdd = ClusterSvdd(svdds)
                 svdd.fit(data[:, train].copy(), init_membership=membership[train])
                 _, classes = svdd.predict(data[:, test].copy())
@@ -96,21 +100,22 @@ if __name__ == '__main__':
     nus = (np.arange(1, 21)/20.)
     ks = [2, 3, 4]
 
-    ks = [3]
-    nus = [0.05]
+    # ks = [3]
+    # nus = [0.1, 0.5, 0.9, 1.0]
 
     outlier_frac = 0.05  # fraction of uniform noise in the generated data
-    reps = 3  # number of repetitions for performance measures
-    num_train = 500
-    num_test = 500
+    # outlier_frac = 0.1  # fraction of uniform noise in the generated data
+    reps = 50  # number of repetitions for performance measures
+    num_train = 1000
+    num_test = 2000
 
     do_plot = True
-    do_evaluation = True
+    do_evaluation = False
 
     res_filename = 'res_robust_{0}_{1}_{2}.npz'.format(reps, len(ks), len(nus))
 
     if do_evaluation:
-        evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test)
+        evaluate(res_filename, nus, ks, outlier_frac, reps, num_train, num_test, use_primal=False)
     if do_plot:
         plot_results(res_filename)
 

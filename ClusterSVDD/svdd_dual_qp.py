@@ -9,7 +9,7 @@ class SvddDualQP:
         Author: Nico Goernitz, TU Berlin, 2015
     """
 
-    PRECISION = 1e-4  # important: effects the threshold, support vectors and speed!
+    PRECISION = 1e-6  # important: effects the threshold, support vectors and speed!
 
     kernel = None 	# (string) name of the kernel to use
     kparam = None 	# (-) kernel parameter
@@ -37,7 +37,7 @@ class SvddDualQP:
         :param max_iter: *ignored*, just for compatibility.
         :return: Alphas and threshold for dual SVDDs.
         """
-        self.X = X
+        self.X = X.copy()
         dims, self.samples = X.shape
 
         if self.samples < 1:
@@ -46,7 +46,7 @@ class SvddDualQP:
 
         # number of training examples
         N = self.samples
-        C = 1. / (self.samples*self.nu)
+        C = 1. / np.float(self.samples*self.nu)
 
         kernel = Kernel.get_kernel(X, X, self.kernel, self.kparam)
         norms = np.diag(kernel).copy()
@@ -64,7 +64,7 @@ class SvddDualQP:
         P = 2.0*matrix(kernel)
 
         # this is the diagonal of the kernel matrix
-        q = matrix(norms)
+        q = -matrix(norms)
 
         # sum_i alpha_i = A alpha = b = 1.0
         A = matrix(1.0, (1, N))
@@ -77,19 +77,33 @@ class SvddDualQP:
         h2 = matrix(0.0, (N, 1))
         h = matrix([h1, h2])
 
-        sol = qp(P, -q, G, h, A, b)
+        sol = qp(P, q, G, h, A, b)
 
         # store solution
-        self.alphas = np.array(sol['x'])
+        self.alphas = np.array(sol['x'], dtype=np.float)
         self.pobj = -sol['primal objective']
 
         # find support vectors
-        self.svs = np.where(self.alphas >= self.PRECISION)[0]
-        self.cTc = self.alphas[self.svs].T.dot(kernel[self.svs, :][:, self.svs].dot(self.alphas[self.svs]))
+        self.svs = np.where(self.alphas > self.PRECISION)[0]
+        # self.cTc = self.alphas[self.svs].T.dot(kernel[self.svs, :][:, self.svs].dot(self.alphas[self.svs]))
+        self.cTc = self.alphas.T.dot(kernel.dot(self.alphas))
 
         # find support vectors with alpha < C for threshold calculation
+        self.radius2 = 0.
         thres = self.predict(X[:, self.svs])
         self.radius2 = np.min(thres)
+
+        # self.radius2 = 0.
+        # thres = self.predict(X)
+        # sort_thres = np.sort(thres)
+        # self.radius2 = sort_thres[np.floor(N*(1.0-self.nu))]
+        # print 'RADIUS => Index: ', np.floor(N*(1.0-self.nu)), self.radius2
+        # print sort_thres
+
+        # print 'jkdsajfjsaldj', np.min(thres)
+        # print np.sum(self.alphas)
+        # print self.nu, np.sum(self.alphas>1e-6), self.samples
+
         # print('Threshold is {0}'.format(self.radius2))
         return self.alphas, thres
 
@@ -107,9 +121,11 @@ class SvddDualQP:
 
     def predict(self, Y):
         # build test kernel
-        kernel = Kernel.get_kernel(Y, self.X[:, self.get_support_inds()], self.kernel, self.kparam)
+        kernel = Kernel.get_kernel(Y, self.X[:, self.svs], self.kernel, self.kparam)
+        # kernel = Kernel.get_kernel(Y, self.X, self.kernel, self.kparam)
         # for svdd we need the data norms additionally
         norms = Kernel.get_diag_kernel(Y, self.kernel)
         # number of training examples
         res = self.cTc - 2. * kernel.dot(self.get_support()).T + norms
+        # res = self.cTc - 2. * kernel.dot(self.alphas).T + norms
         return res.reshape(Y.shape[1]) - self.radius2

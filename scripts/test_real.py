@@ -1,6 +1,7 @@
 import sklearn.metrics as metrics
 import numpy as np
 
+from ClusterSVDD.svdd_dual_qp import SvddDualQP
 from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
 from ClusterSVDD.cluster_svdd import ClusterSvdd
 
@@ -26,14 +27,15 @@ def load_data_set(fname, num_data, outlier_frac, train_inds):
 
     # induce anomalies
     anoms = int(float(num_data)*outlier_frac)
-    X[:, :anoms] = np.random.rand(X.shape[0], anoms)*2.-1.
+    X[:, :anoms] = 1.*(np.random.rand(X.shape[0], anoms)*2.-1.)
     y[:anoms] = -1
 
     print np.unique(y)
     return X, y
 
 
-def evaluate(res_filename, dataset, nus, ks, outlier_frac, reps, num_train, num_val, num_test):
+def evaluate(res_filename, dataset, nus, ks, outlier_frac,
+             reps, num_train, num_val, num_test, use_kernels=False):
     train = np.array(range(num_train-num_val), dtype='i')
     val = np.array(range(num_train-num_val, num_train), dtype='i')
     test = np.array(range(num_train, num_train + num_test), dtype='i')
@@ -57,15 +59,26 @@ def evaluate(res_filename, dataset, nus, ks, outlier_frac, reps, num_train, num_
             for i in range(len(nus)):
                 svdds = list()
                 for l in range(ks[k]):
-                    svdds.append(SvddPrimalSGD(nus[i]))
-                    #svdds.append(SvddDualQP('rbf', 0.8, nus[i]))
+                    if use_kernels:
+                        svdds.append(SvddDualQP('rbf', 20.0, nus[i]))
+                    else:
+                        svdds.append(SvddPrimalSGD(nus[i]))
                 svdd = ClusterSvdd(svdds)
                 svdd.fit(data[:, train].copy(), init_membership=membership[train])
                 # test error
                 scores, classes = svdd.predict(data[:, test].copy())
+
                 # evaluate clustering abilities
-                inds = np.where((y[test] >= 0))[0]
-                aris[n, i, k] = metrics.cluster.adjusted_rand_score(y[test[inds]], classes[inds])
+                # inds = np.where((y[test] >= 0))[0]
+                # aris[n, i, k] = metrics.cluster.adjusted_rand_score(y[test[inds]], classes[inds])
+
+                ari = metrics.cluster.adjusted_rand_score(y[test], classes)
+                if nus[i] < 1.0:
+                    inds = np.where(scores <= 0.)[0]
+
+                    ari = metrics.cluster.adjusted_rand_score(y[test[inds]], classes[inds])
+                aris[n, i, k] = ari
+
                 # ...and anomaly detection accuracy
                 fpr, tpr, _ = metrics.roc_curve(np.array(y[test]<0., dtype='i'), scores, pos_label=1)
                 aucs[n, i, k] = metrics.auc(fpr, tpr)
@@ -73,8 +86,15 @@ def evaluate(res_filename, dataset, nus, ks, outlier_frac, reps, num_train, num_
                 # validation error
                 scores, classes = svdd.predict(data[:, val].copy())
                 # evaluate clustering abilities
-                inds = np.where((y[val] >= 0))[0]
-                val_aris[n, i, k] = metrics.cluster.adjusted_rand_score(y[val[inds]], classes[inds])
+                # inds = np.where((y[val] >= 0))[0]
+                # val_aris[n, i, k] = metrics.cluster.adjusted_rand_score(y[val[inds]], classes[inds])
+
+                ari = metrics.cluster.adjusted_rand_score(y[val], classes)
+                if nus[i] < 1.0:
+                    inds = np.where(scores <= 0.)[0]
+                    ari = metrics.cluster.adjusted_rand_score(y[val[inds]], classes[inds])
+                val_aris[n, i, k] = ari
+
                 # ...and anomaly detection accuracy
                 fpr, tpr, _ = metrics.roc_curve(np.array(y[val]<0., dtype='i'), scores, pos_label=1)
                 val_aucs[n, i, k] = metrics.auc(fpr, tpr)
@@ -135,12 +155,12 @@ def evaluate(res_filename, dataset, nus, ks, outlier_frac, reps, num_train, num_
     return res, res_stds
 
 if __name__ == '__main__':
-    dataset_name = "../segment.scale.txt" # 7c
-    # dataset_name = "../satimage.scale.txt" # 6c
+    dataset_name = "../../segment.scale.txt" # 7c
+    # dataset_name = "../../satimage.scale.txt" # 6c
 
     nus = [1.0, 0.95, 0.9, 0.5, 0.1, 0.01]
     outlier_fracs = [0.0, 0.02, 0.05, 0.1, 0.15]  # fraction of uniform noise in the generated data
-    reps = 1  # number of repetitions for performance measures
+    reps = 10  # number of repetitions for performance measures
 
     ks = [1, 5, 7, 10, 14] # segment
     num_train = 1155
@@ -149,18 +169,26 @@ if __name__ == '__main__':
 
     if 'satimage' in dataset_name:
         ks = [1, 3, 6, 9]
+        # ks = [1, 3, 5, 6, 7]
         num_train = 2217
         num_test = 2218
         num_val = 400
 
-    res_filename = 'res_real_{0}_{1}.npz'.format(reps, dataset_name[3:])
+    # nus = [1.0, 0.95]
+    # outlier_fracs = [0.1]  # fraction of uniform noise in the generated data
+    # reps = 1  # number of repetitions for performance measures
+    # ks = [6] # segment
+
+
+    res_filename = 'res_real_{0}_{1}.npz'.format(reps, dataset_name[6:])
 
     # res: 0:AUC-SVDD, 1:AUC-CSVDD, 2:ARI-KMEANS, 3:ARI-CSVDD
     res = np.zeros((len(outlier_fracs), 4))
     res_stds = np.zeros((len(outlier_fracs), 4))
     for i in range(len(outlier_fracs)):
         res[i, :], res_stds[i, :] = evaluate(res_filename, dataset_name, \
-                                             nus, ks, outlier_fracs[i], reps, num_train, num_val, num_test)
+                                             nus, ks, outlier_fracs[i], reps,
+                                             num_train, num_val, num_test, use_kernels=False)
 
     np.savez(res_filename, dataset=dataset_name, res=res, res_stds=res_stds, \
             outlier_fracs=outlier_fracs, ntrain=num_train, nval=num_val, ntest=num_test, reps=reps, nus=nus, ks=ks)

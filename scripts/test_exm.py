@@ -1,7 +1,6 @@
+
 import matplotlib.pyplot as plt
 import numpy as np
-
-import sklearn.datasets as datasets
 
 from ClusterSVDD.svdd_primal_sgd import SvddPrimalSGD
 from ClusterSVDD.svdd_dual_qp import SvddDualQP
@@ -12,8 +11,8 @@ def generate_gaussians(datapoints, cluster, noise_frac=0.1, dims=2):
     mean_mul = 50.
     vars = [4.1, 4.1]
 
-    num_noise = np.floor(datapoints*noise_frac)
-    num_dpc = np.floor(float(datapoints-num_noise)/float(cluster))
+    num_noise = np.int(np.floor(datapoints*noise_frac))
+    num_dpc = np.int(np.floor(float(datapoints-num_noise)/float(cluster)))
 
     X = np.zeros((dims, datapoints))
     X[:, :num_noise] = 100.*(2.*np.random.rand(dims, num_noise)-1.)
@@ -60,9 +59,9 @@ if __name__ == '__main__':
     nus = [0.14] # ANOM - PRIMAL
     nus = [0.07]  # ANOM - DUAL
 
-    #nus = [0.8]  # CLUSTER - DUAL, PRIMAL
+    nus = [0.8]  # CLUSTER - DUAL, PRIMAL
     n_cluster = 4  # 'k' number of clusters for the methods and data generation
-    use_primal = False
+    use_primal = True
     # use primal sgd svdd or dual kernel qp
     ad_setting = True  # either ad or cluster setting
 
@@ -101,10 +100,10 @@ if __name__ == '__main__':
 
         # The code below is basically only for beautiful visualizations
         plt.figure(1)
-        plt.subplot(1, len(nus)+2, i+1)
+        plt.subplot(1, len(nus)+2, (i+1) % (len(nus)+2)+1)
         if i < len(nus)+1:
             Z = np.reshape(res,(sx, sy))
-            cs = plt.contourf(X, Y, Z, alpha=0.5, cmap=plt.cm.bone)
+            # cs = plt.contourf(X, Y, Z, alpha=0.5, cmap=plt.cm.bone)
             if ad_setting:
                 cs2 = plt.contour(X, Y, Z, [0.0], linewidths=2.0, colors='w', alpha=0.8)
 
@@ -133,21 +132,21 @@ if __name__ == '__main__':
         if i == 0:
             if use_primal:
                 if ad_setting:
-                    plt.title(r'SVDD')
+                    plt.title(r'SVDD', fontsize=16)
                 else:
-                    plt.title(r'K-Means')
+                    plt.title(r'K-Means', fontsize=16)
             else:
                 if ad_setting:
-                    plt.title(r'Kernel SVDD')
+                    plt.title(r'Kernel SVDD', fontsize=16)
                 else:
-                    plt.title(r'Kernel K-Means')
+                    plt.title(r'Kernel K-Means', fontsize=16)
         elif i < len(nus)+1:
             if use_primal:
-                plt.title(r'ClusterSVDD')
+                plt.title(r'ClusterSVDD', fontsize=16)
             else:
-                plt.title(r'Kernel ClusterSVDD')
+                plt.title(r'Kernel ClusterSVDD', fontsize=16)
         else:
-            plt.title(r'Ground truth')
+            plt.title(r'Ground truth', fontsize=16)
         plt.xlim((-2., 2.))
         plt.ylim((-2., 2.))
         plt.yticks(range(-2, 2), [])
